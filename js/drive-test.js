@@ -48,9 +48,36 @@ async function explain(res, apiName) {
   } catch { /* no JSON body */ }
   if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) return `The ${apiName} is turned off for this project. Turn it on (setup step 1), wait two minutes, and run the check again.\n\nGoogle said: ${msg}`;
   if (/admin|policy|domain|organization/i.test(msg)) return `Your district’s Google settings appear to block this.\n\nGoogle said: ${msg}`;
+  if (res.status === 429) return `Google’s per-minute limit was reached. Wait a minute and run the check again.\n\nGoogle said: ${msg}`;
   if (res.status === 401) return `Google’s permission expired. Run the check again.\n\nGoogle said: ${msg}`;
   if (res.status === 404) return `Google couldn’t open that file with this permission. Try a deck you own.\n\nGoogle said: ${msg}`;
   return `Google said: ${msg}`;
+}
+
+/** Download a picture Google hosts and re-save it as a compact JPEG (what the app stores). */
+async function saveAsJpeg(url) {
+  let bitmapSrc;
+  try {
+    const blob = await fetch(url).then((r) => { if (!r.ok) throw new Error(`picture download failed (${r.status})`); return r.blob(); });
+    bitmapSrc = URL.createObjectURL(blob);
+  } catch (first) {
+    bitmapSrc = url; // fall back to loading it as an image
+  }
+  const img = await new Promise((resolve, reject) => {
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => resolve(im);
+    im.onerror = () => reject(new Error('Chrome blocked reading the slide picture.'));
+    im.src = bitmapSrc;
+  });
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0);
+  return c.toDataURL('image/jpeg', 0.82); // throws if the picture "tainted" the canvas
 }
 
 const api = (token) => (url, opts = {}) => fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...(opts.headers || {}) } });
@@ -65,10 +92,38 @@ async function checkDeck(call, id, label) {
   const sample = withNotes.length ? `\nFirst note starts: “${withNotes[0].notes.slice(0, 70)}${withNotes[0].notes.length > 70 ? '…' : ''}”` : '';
   row('ok', `Read “${pres.title}”${label}`, `${notes.length} slides, ${withNotes.length} with speaker notes.${sample}`);
 
-  const pdf = await call(`https://www.googleapis.com/drive/v3/files/${id}/export?mimeType=application/pdf`);
-  if (!pdf.ok) { row('bad', `Couldn’t export the slide pictures${label}`, await explain(pdf, 'Google Drive API')); return false; }
-  const blob = await pdf.blob();
-  row('ok', `Exported the slide pictures${label}`, `PDF of ${(blob.size / 1048576).toFixed(1)} MB.${blob.size > 9.5 * 1048576 ? ' That’s near Google’s 10 MB export limit; very image-heavy decks may need the PDF upload instead.' : ''}`);
+  // Slide-by-slide pictures (no whole-deck size limit).
+  const tryThese = (pres.slides || []).slice(0, 3);
+  let totalMs = 0;
+  let totalKb = 0;
+  let firstUrl = '';
+  let dims = '';
+  for (const s of tryThese) {
+    const t0 = performance.now();
+    const res = await call(`https://slides.googleapis.com/v1/presentations/${id}/pages/${s.objectId}/thumbnail?thumbnailProperties.thumbnailSize=LARGE&thumbnailProperties.mimeType=PNG`);
+    if (!res.ok) { row('bad', `Couldn’t get a slide picture${label}`, await explain(res, 'Google Slides API')); return false; }
+    const { contentUrl, width, height } = await res.json();
+    let jpeg;
+    try {
+      jpeg = await saveAsJpeg(contentUrl);
+    } catch (err) {
+      row('bad', `Got a slide picture but the browser wouldn’t let the app save it${label}`, String(err.message || err));
+      return false;
+    }
+    totalMs += performance.now() - t0;
+    totalKb += (jpeg.length * 3) / 4 / 1024;
+    if (!firstUrl) { firstUrl = jpeg; dims = `${width}×${height}`; }
+  }
+  const each = totalMs / tryThese.length / 1000;
+  const minutes = Math.max(1, Math.round((pres.slides.length * each) / 60));
+  const li = row('ok', `Saved slide pictures one at a time${label}`,
+    `Tested ${tryThese.length} of ${pres.slides.length} slides: about ${each.toFixed(1)} seconds and ${Math.round(totalKb / tryThese.length)} KB each (${dims}). `
+    + `Bringing in the whole deck would take roughly ${minutes} minute${minutes === 1 ? '' : 's'}, once.`);
+  const img = document.createElement('img');
+  img.src = firstUrl;
+  img.alt = 'First slide as the app would store it';
+  img.style.cssText = 'display:block;max-width:260px;margin-top:8px;border:1px solid #D5DBE3;border-radius:6px';
+  li.querySelector('.d').appendChild(img);
   return true;
 }
 

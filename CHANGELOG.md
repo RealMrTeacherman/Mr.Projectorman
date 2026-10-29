@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.1.0-check2 (2026-10-29)
+- Drive check now tests slide-by-slide pictures (no whole-deck size limit) instead of one PDF export, which Google caps at 10 MB. Shows timing, size, and a preview of the first slide as stored.
+
 ## v1.1.0-check (2026-10-29)
 - New drive-test.html: step-by-step check that Google Drive import is allowed for the signed-in account (permission, file picker, speaker notes, PDF export, PowerPoint conversion).
 - core.js: extractNotes() reads speaker notes from the Google Slides API, keyed by slide id (3 new unit tests; 16 total).
