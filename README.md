@@ -2,8 +2,8 @@
 
 Control and draw on your slides from your phone while they show on the projector from your classroom computer. Runs entirely in the browser (nothing to install on the school computer), hosted on GitHub Pages, synced live through Firebase.
 
-- **Computer:** `https://realmrteacherman.github.io/Mr.Projectorman/`
-- **Phone:** `https://realmrteacherman.github.io/Mr.Projectorman/remote.html` (add to Home Screen)
+**One link for everything:** `https://realmrteacherman.github.io/Mr.Projectorman/`
+Computers get the projector page; phones are sent to the remote automatically. (To use the computer page from a phone, add `?computer` to the end of the link.)
 
 ## One-time setup (about 15 minutes)
 
@@ -25,7 +25,7 @@ A separate project from Planbook keeps the two apps' rules from tangling. The fr
 ### 3. First run
 1. On the classroom computer, open the computer link and sign in with Google.
    If your district account blocks the sign-in, use a personal Gmail; just use the same one every time.
-2. On your phone, open the phone link in **Safari** (Chrome on Android), tap **Share › Add to Home Screen**, then open **Slide Remote from the Home Screen**.
+2. On your phone, open the same link in **Safari** (Chrome on Android), tap **Share › Add to Home Screen**, then open **Slide Remote from the Home Screen**.
 3. On the computer, click **Phones and pairing**. Type the 6-digit code into your phone.
 
 That's the only time you'll see a code. From then on, open the page on the computer and tap the icon on your phone; they find each other.

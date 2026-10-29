@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Slide Remote</title>
+<script>
+  // Phones belong on the remote. Runs before anything draws, so there's no flash of the computer page.
+  // Add ?computer to the address to stay on this page from a phone anyway.
+  (function () {
+    try {
+      if (/[?&]computer\b/.test(location.search)) { sessionStorage.setItem('stayComputer', '1'); return; }
+      if (sessionStorage.getItem('stayComputer')) return;
+      var phoneUA = /iPhone|iPod|Android.+Mobile|Windows Phone/i.test(navigator.userAgent);
+      var smallTouch = Math.min(screen.width, screen.height) < 600 && window.matchMedia('(pointer: coarse)').matches;
+      if (phoneUA || smallTouch) location.replace('remote.html');
+    } catch (e) { /* stay on this page */ }
+  })();
+</script>
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

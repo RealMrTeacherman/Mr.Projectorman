@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.2 (2026-10-29)
+- Phones opening the main link are sent to the remote automatically; computers and iPads stay on the projector page. `?computer` keeps a phone on the computer page.
+- The pairing window now gives the main link instead of remote.html.
+- Tests: 7 new device checks (43 end-to-end checks total).
+
 ## v1.1.0-check2 (2026-10-29)
 - Drive check now tests slide-by-slide pictures (no whole-deck size limit) instead of one PDF export, which Google caps at 10 MB. Shows timing, size, and a preview of the first slide as stored.
 

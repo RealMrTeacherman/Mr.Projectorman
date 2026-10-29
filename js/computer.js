@@ -297,7 +297,7 @@ function checkNewPhone() {
 }
 
 function openPairing() {
-  $('remoteUrl').textContent = new URL('remote.html', location.href).href.replace(/^https?:\/\//, '');
+  $('remoteUrl').textContent = new URL('.', location.href).href.replace(/^https?:\/\//, '');
   $('pairDialog').showModal();
   newCode();
 }

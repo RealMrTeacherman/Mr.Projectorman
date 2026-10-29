@@ -147,6 +147,26 @@ try:
     check('choosing another deck returns computer to home', comp.is_visible('#home'))
     check('phone back on deck list', phone.is_visible('#decks'))
 
+
+    # Phones opening the main link land on the remote; computers and tablets stay put.
+    devices = {
+      'iPhone': dict(user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1', viewport={'width':390,'height':844}, is_mobile=True, has_touch=True),
+      'Android phone': dict(user_agent='Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36', viewport={'width':412,'height':915}, is_mobile=True, has_touch=True),
+    }
+    for name, opts in devices.items():
+      mctx = br.new_context(**opts); mp = mctx.new_page()
+      mp.goto(B+'index.html'); mp.wait_for_url('**/remote.html', timeout=5000)
+      check(f'{name} opening the main link lands on the remote', mp.url.endswith('/remote.html'))
+      mp.goto(B+'index.html?computer'); time.sleep(0.5)
+      check(f'{name} can stay on the computer page with ?computer', mp.url.endswith('index.html?computer'))
+      mctx.close()
+    ipad = br.new_context(user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15', viewport={'width':1024,'height':1366}, has_touch=True)
+    ip = ipad.new_page(); ip.goto(B+'index.html'); time.sleep(0.5)
+    check('iPad stays on the computer page', ip.url.endswith('index.html')); ipad.close()
+    lap = br.new_context(viewport={'width':1280,'height':720}); lp = lap.new_page(); lp.goto(B+'index.html'); time.sleep(0.5)
+    check('laptop stays on the computer page', lp.url.endswith('index.html')); lap.close()
+    check('pairing tells the phone to open the main link', not comp.evaluate("document.getElementById('remoteUrl').textContent").endswith('remote.html'))
+
     # Remove phone -> phone is told to re-pair (simulate by deleting remote and having fake deny)
     check('no page errors', not errors)
     for e in errors: print('  ', e)
