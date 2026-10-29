@@ -154,3 +154,19 @@ export function inkKey(live) {
   if (!live) return null;
   return live.mode === 'whiteboard' ? 'wb' : String(live.slide || 0);
 }
+
+/**
+ * Speaker notes from a Google Slides API presentation, one entry per slide, in order.
+ * Returns [{ id, notes }] where id is the slide's objectId (stable across reordering).
+ */
+export function extractNotes(presentation) {
+  const slides = (presentation && presentation.slides) || [];
+  return slides.map((s) => {
+    const page = s.slideProperties && s.slideProperties.notesPage;
+    const notesId = page && page.notesProperties && page.notesProperties.speakerNotesObjectId;
+    const el = page && (page.pageElements || []).find((e) => e.objectId === notesId);
+    const parts = (el && el.shape && el.shape.text && el.shape.text.textElements) || [];
+    const text = parts.map((t) => (t.textRun ? t.textRun.content : '')).join('');
+    return { id: s.objectId, notes: text.trim() };
+  });
+}

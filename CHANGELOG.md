@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.0-check (2026-10-29)
+- New drive-test.html: step-by-step check that Google Drive import is allowed for the signed-in account (permission, file picker, speaker notes, PDF export, PowerPoint conversion).
+- core.js: extractNotes() reads speaker notes from the Google Slides API, keyed by slide id (3 new unit tests; 16 total).
+
 ## v1.0.1 (2026-10-29)
 - Startup problems now show on the page instead of a blank screen: a missing `export` in config.js, a missing `databaseURL` (listed by name), Firebase rejecting the settings, or a file that failed to load.
 - New file: js/boot-check.js.

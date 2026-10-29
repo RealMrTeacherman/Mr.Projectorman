@@ -85,3 +85,40 @@ test('ink key separates slides from the whiteboard', () => {
   assert.equal(inkKey({ mode: 'whiteboard', slide: 3 }), 'wb');
   assert.equal(inkKey(null), null);
 });
+
+import { extractNotes } from '../js/core.js';
+
+const slideWith = (id, notesText, notesId = `${id}-n`) => ({
+  objectId: id,
+  slideProperties: {
+    notesPage: {
+      notesProperties: { speakerNotesObjectId: notesId },
+      pageElements: [
+        { objectId: 'other', shape: { text: { textElements: [{ textRun: { content: 'slide number box' } }] } } },
+        notesText == null ? { objectId: notesId } : {
+          objectId: notesId,
+          shape: { text: { textElements: [{ paragraphMarker: {} }, ...notesText.map((t) => ({ textRun: { content: t } }))] } },
+        },
+      ],
+    },
+  },
+});
+
+test('extractNotes reads each slide’s speaker notes in order, with slide ids', () => {
+  const pres = { slides: [slideWith('a', ['Ask: which number ', 'is the whole?\n']), slideWith('b', null), slideWith('c', ['Turn and talk\n'])] };
+  assert.deepEqual(extractNotes(pres), [
+    { id: 'a', notes: 'Ask: which number is the whole?' },
+    { id: 'b', notes: '' },
+    { id: 'c', notes: 'Turn and talk' },
+  ]);
+});
+
+test('extractNotes ignores other text boxes on the notes page', () => {
+  const [one] = extractNotes({ slides: [slideWith('a', ['Real note'])] });
+  assert.equal(one.notes, 'Real note');
+});
+
+test('extractNotes copes with missing data', () => {
+  assert.deepEqual(extractNotes(null), []);
+  assert.deepEqual(extractNotes({ slides: [{ objectId: 'x' }] }), [{ id: 'x', notes: '' }]);
+});

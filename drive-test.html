@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slide Remote: Google Drive check</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap">
+<script src="js/boot-check.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<style>
+  main { max-width: 640px; margin: 0 auto; padding: 48px 24px; display: flex; flex-direction: column; gap: 20px; }
+  h1 { margin: 0; font-size: 28px; }
+  p { margin: 0; line-height: 1.5; color: var(--muted); }
+  ol#results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  #results li { display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  #results .mark { flex: none; width: 26px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; background: #8A94A3; }
+  #results .ok .mark { background: var(--green); }
+  #results .bad .mark { background: var(--red); }
+  #results .t { font-weight: 600; }
+  #results .d { font-size: 14px; color: var(--muted); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+  .summary { padding: 16px; border-radius: 12px; font-weight: 600; }
+  .summary.ok { background: var(--green-soft); color: var(--green); }
+  .summary.bad { background: #FDECEA; color: #8A1F17; }
+</style>
+</head>
+<body>
+<section id="bootError" class="notice boot-error" hidden>
+  <h1>The Drive check couldn’t start</h1>
+  <p>Copy this to Claude.</p>
+  <pre></pre>
+</section>
+<main>
+  <h1>Google Drive check</h1>
+  <p>This tests whether Slide Remote can bring in decks straight from your Google Drive. It doesn’t change anything in your Drive, except that a PowerPoint test makes a temporary copy and deletes it right away.</p>
+  <p>Sign in with the <strong>same school account</strong> you use for Slide Remote, then pick one Google Slides deck that has speaker notes. Run it a second time with a PowerPoint file if you use those.</p>
+  <div><button class="btn" id="go" type="button">Start the check</button></div>
+  <ol id="results" aria-live="polite"></ol>
+  <div id="summary" class="summary" hidden></div>
+</main>
+<script type="module" src="js/drive-test.js"></script>
+</body>
+</html>
