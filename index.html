@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slide Remote</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/computer.css">
+</head>
+<body>
+
+<section id="notConfigured" class="notice" hidden>
+  <h1>Almost ready</h1>
+  <p>Slide Remote needs your Firebase settings. Open <strong>js/config.js</strong>, paste in your Firebase web config, and push the change. The README walks through it.</p>
+</section>
+
+<section id="signedOut" class="notice" hidden>
+  <h1>Slide Remote</h1>
+  <p>Sign in to see your decks and connect your phone.</p>
+  <button class="btn" id="signInBtn" type="button">Sign in with Google</button>
+  <p id="signInError" class="error" hidden></p>
+</section>
+
+<main id="home" hidden>
+  <header class="top">
+    <div>
+      <h1>Slide Remote</h1>
+      <p class="muted" id="whoami"></p>
+    </div>
+    <div id="phoneChip" class="chip"></div>
+  </header>
+
+  <div class="intro">
+    <h2>Choose a deck to present</h2>
+    <p class="muted">Pick one here or on your phone. Your phone switches to the remote on its own.</p>
+  </div>
+
+  <div id="deckGrid" class="grid">
+    <label class="add-card" id="addCard">
+      <input type="file" id="pdfInput" accept="application/pdf,.pdf" hidden>
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <span class="add-title">Add a deck</span>
+      <span class="add-sub" id="addSub">Drop a PDF from Google Slides<br>(File › Download › PDF)</span>
+    </label>
+  </div>
+
+  <footer class="foot">
+    <span class="muted">Keys while presenting: arrows to move, B to hide the screen, W for the whiteboard, F for full screen, Esc to stop.</span>
+    <span class="foot-links">
+      <button class="linkish" id="pairLink" type="button">Phones and pairing</button>
+      <button class="linkish" id="signOutBtn" type="button">Sign out</button>
+    </span>
+  </footer>
+</main>
+
+<dialog id="pairDialog">
+  <h2>Connect a phone</h2>
+  <ol class="pair-steps">
+    <li>On your phone, open <strong id="remoteUrl"></strong> in Safari or Chrome.</li>
+    <li>Add it to your Home Screen, then open it from there.</li>
+    <li>Type this code:</li>
+  </ol>
+  <div class="code" id="pairCode" aria-live="polite">------</div>
+  <p class="muted small" id="pairStatus">The code works for 10 minutes. You only need it once per phone.</p>
+  <h3>Connected phones</h3>
+  <ul id="phoneList" class="phone-list"></ul>
+  <div class="dialog-actions">
+    <button class="btn secondary" id="newCodeBtn" type="button">New code</button>
+    <button class="btn" id="closePairBtn" type="button">Done</button>
+  </div>
+</dialog>
+
+<div id="stage" class="stage" hidden>
+  <div class="slidebox" id="slideBox">
+    <img id="slideImg" alt="">
+    <canvas id="inkCanvas"></canvas>
+  </div>
+  <div class="pill" id="pill"><span class="dot" id="pillDot"></span><span id="pillText"></span></div>
+  <button class="exit" id="exitBtn" type="button">Stop presenting</button>
+  <div class="fs-hint" id="fsHint" hidden>Click anywhere for full screen</div>
+</div>
+
+<script type="module" src="js/computer.js"></script>
+</body>
+</html>

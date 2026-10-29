@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('remotes').child($uid).child(auth.uid).exists())",
+        ".write": "auth != null && (auth.uid === $uid || root.child('remotes').child($uid).child(auth.uid).exists())"
+      }
+    },
+    "remotes": {
+      "$owner": {
+        ".read": "auth != null && auth.uid === $owner",
+        "$rid": {
+          ".read": "auth != null && auth.uid === $rid",
+          ".write": "auth != null && (auth.uid === $owner || (auth.uid === $rid && !data.exists() && newData.hasChild('code') && root.child('pairing').child(newData.child('code').val()).child('owner').val() === $owner && root.child('pairing').child(newData.child('code').val()).child('expires').val() > now))"
+        }
+      }
+    },
+    "pairing": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('owner').val() === auth.uid) || (data.exists() && data.child('owner').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['owner', 'expires']) && $code.matches(/^[0-9]{6}$/)"
+      }
+    }
+  }
+}

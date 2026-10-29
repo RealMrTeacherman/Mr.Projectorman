@@ -1,0 +1,87 @@
+// Run with: node --test tests/
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  encodePoints, decodePoints, fitBox, distToSegment, hitStroke, strokesHit,
+  clampSlide, makeCode, isValidCode, inkKey, PEN_WIDTH,
+} from '../js/core.js';
+
+test('points survive an encode/decode round trip (rounded to 4 places)', () => {
+  const pts = [{ x: 0.123456, y: 0.5 }, { x: 1, y: 0 }];
+  assert.deepEqual(decodePoints(encodePoints(pts)), [{ x: 0.1235, y: 0.5 }, { x: 1, y: 0 }]);
+});
+
+test('encode clamps points that slide off the edge', () => {
+  assert.deepEqual(encodePoints([{ x: -0.2, y: 1.4 }]), [0, 1]);
+});
+
+test('decode accepts the object form Firebase can return', () => {
+  assert.deepEqual(decodePoints({ 0: 0.1, 1: 0.2, 2: 0.3, 3: 0.4 }), [{ x: 0.1, y: 0.2 }, { x: 0.3, y: 0.4 }]);
+  assert.deepEqual(decodePoints(null), []);
+});
+
+test('fitBox letterboxes a 16:9 slide in a tall phone area', () => {
+  const b = fitBox(390, 600, 16 / 9);
+  assert.equal(b.w, 390);
+  assert.ok(Math.abs(b.h - 219.375) < 1e-9);
+  assert.ok(Math.abs(b.y - (600 - 219.375) / 2) < 1e-9);
+});
+
+test('fitBox pillarboxes a 16:9 slide in a 4:3 projector', () => {
+  const b = fitBox(1024, 768, 16 / 9);
+  assert.equal(b.w, 1024);
+  const c = fitBox(1000, 400, 16 / 9);
+  assert.equal(c.h, 400);
+  assert.ok(Math.abs(c.x - (1000 - 400 * 16 / 9) / 2) < 1e-9);
+});
+
+test('fitBox returns an empty box for bad input', () => {
+  assert.deepEqual(fitBox(0, 100, 1.7), { x: 0, y: 0, w: 0, h: 0 });
+});
+
+test('distToSegment measures to the nearest point on the segment', () => {
+  assert.equal(distToSegment({ x: 5, y: 5 }, { x: 0, y: 0 }, { x: 10, y: 0 }), 5);
+  assert.equal(distToSegment({ x: -3, y: 4 }, { x: 0, y: 0 }, { x: 10, y: 0 }), 5);
+});
+
+test('eraser hits a stroke it touches and misses one far away', () => {
+  const s = { w: PEN_WIDTH, p: encodePoints([{ x: 0.1, y: 0.5 }, { x: 0.9, y: 0.5 }]) };
+  assert.equal(hitStroke(s, { x: 0.5, y: 0.51 }, 1000, 562, 12), true);
+  assert.equal(hitStroke(s, { x: 0.5, y: 0.8 }, 1000, 562, 12), false);
+});
+
+test('eraser can hit a single-dot stroke', () => {
+  const dot = { p: [0.5, 0.5] };
+  assert.equal(hitStroke(dot, { x: 0.505, y: 0.5 }, 1000, 562, 12), true);
+});
+
+test('strokesHit returns only the touched keys', () => {
+  const strokes = {
+    a: { p: encodePoints([{ x: 0, y: 0 }, { x: 1, y: 0 }]) },
+    b: { p: encodePoints([{ x: 0, y: 1 }, { x: 1, y: 1 }]) },
+  };
+  assert.deepEqual(strokesHit(strokes, { x: 0.5, y: 0.001 }, 1000, 500, 10), ['a']);
+});
+
+test('clampSlide keeps navigation in range', () => {
+  assert.equal(clampSlide(5, 12), 5);
+  assert.equal(clampSlide(12, 12), 11);
+  assert.equal(clampSlide(-1, 12), 0);
+  assert.equal(clampSlide(3, 0), 0);
+});
+
+test('pairing codes are always six digits', () => {
+  assert.equal(makeCode(() => 0), '000000');
+  assert.equal(makeCode(() => 0.0000421), '000042');
+  assert.equal(makeCode(() => 0.9999999), '999999');
+  assert.ok(isValidCode(makeCode()));
+  assert.equal(isValidCode('12345'), false);
+  assert.equal(isValidCode('12a456'), false);
+});
+
+test('ink key separates slides from the whiteboard', () => {
+  assert.equal(inkKey({ mode: 'slide', slide: 3 }), '3');
+  assert.equal(inkKey({ mode: 'hidden', slide: 3 }), '3');
+  assert.equal(inkKey({ mode: 'whiteboard', slide: 3 }), 'wb');
+  assert.equal(inkKey(null), null);
+});
