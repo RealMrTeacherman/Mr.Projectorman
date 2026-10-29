@@ -1,16 +1,23 @@
 // computer.js: the classroom computer. Shows decks, presents on the projector,
 // and draws whatever ink the phone sends.
 import {
-  configured, missingKeys, initError, auth, db, P, ref, set, push, remove, get, onValue,
+  configured, missingKeys, initError, auth, db, P, ref, set, update, push, remove, get, onValue,
   GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, stayPresent, keepAwake,
 } from './firebase.js';
-import { fitBox, renderInk, inkKey, makeCode } from './core.js';
+import { fitBox, renderInk, inkKey, makeCode, staleInkKeys, isPresentable } from './core.js';
+import { createSlideCache } from './slides.js';
+import {
+  SLIDES_MIME, PPTX_MIME, getDriveToken, pickDeck, convertInDrive, uploadAndConvert, deleteFile,
+  readDeck, slidePicture, toJpeg,
+} from './drive.js';
 import { startDeck, endDeck, step, toggleMode } from './live.js';
 
 const $ = (id) => document.getElementById(id);
 const show = (id, on) => { $(id).hidden = !on; };
 
 window.__appStarted = true;
+
+const slides = createSlideCache(() => S.uid);
 
 const S = {
   uid: null,
@@ -19,8 +26,7 @@ const S = {
   live: null,
   remotes: {},
   phonesOnline: {},
-  slides: {},        // deckId → [dataURL]
-  loading: {},       // deckId → Promise
+  jobs: {},          // deckId → import running in this tab
   ink: {},
   inkSub: null,
   inkPath: null,
@@ -81,6 +87,8 @@ function renderDecks() {
   const add = $('addCard');
   for (const [id, d] of entries) {
     const card = document.createElement('div');
+    const importing = d.status === 'importing';
+    const running = !!S.jobs[id];
     card.className = 'deck' + (S.live && S.live.deckId === id ? ' live' : '');
     card.innerHTML = `
       <button class="open" type="button">
@@ -88,29 +96,58 @@ function renderDecks() {
         <span class="name"></span>
         <span class="meta"></span>
       </button>
-      <div class="tools">
-        <button class="linkish" data-act="clear" type="button">Clear drawings</button>
-        <button class="linkish danger" data-act="delete" type="button">Delete</button>
-      </div>`;
+      <div class="progress" hidden><span class="bar"></span></div>
+      <div class="tools"></div>`;
     if (d.thumb) card.querySelector('.thumb').src = d.thumb;
     card.querySelector('.name').textContent = d.title || 'Untitled deck';
-    card.querySelector('.meta').textContent = `${d.count} slide${d.count === 1 ? '' : 's'} · ${usedText(d.lastUsed)}`;
-    card.querySelector('.open').addEventListener('click', () => startDeck(S.uid, id));
-    card.querySelector('[data-act="clear"]').addEventListener('click', () => {
-      if (confirm(`Erase every drawing in “${d.title}”?`)) remove(ref(db, P.inkDeck(S.uid, id)));
-    });
-    card.querySelector('[data-act="delete"]').addEventListener('click', async () => {
-      if (!confirm(`Delete “${d.title}” and its drawings? This can’t be undone.`)) return;
-      if (S.live && S.live.deckId === id) await endDeck(S.uid);
-      await Promise.all([
-        remove(ref(db, P.deck(S.uid, id))),
-        remove(ref(db, P.slides(S.uid, id))),
-        remove(ref(db, P.inkDeck(S.uid, id))),
-      ]);
-      delete S.slides[id];
-    });
+    const meta = card.querySelector('.meta');
+    const tools = card.querySelector('.tools');
+    const tool = (label, fn, danger) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'linkish' + (danger ? ' danger' : '');
+      b.textContent = label;
+      b.addEventListener('click', fn);
+      tools.appendChild(b);
+    };
+
+    if (importing) {
+      const pr = d.progress || { done: 0, total: 0 };
+      const verb = d.rev ? 'Updating' : 'Bringing in';
+      meta.textContent = running
+        ? `${verb} slides: ${pr.done} of ${pr.total || '…'}`
+        : `${verb} stopped at ${pr.done} of ${pr.total || '…'}`;
+      const bar = card.querySelector('.progress');
+      bar.hidden = false;
+      bar.querySelector('.bar').style.width = `${pr.total ? Math.round((pr.done / pr.total) * 100) : 3}%`;
+      if (!running) {
+        if (d.driveId) tool('Try again', () => runImport({ deckId: id }));
+        tool(d.rev ? 'Keep the old version' : 'Remove', () => abandonImport(id), true);
+      }
+    } else {
+      meta.textContent = `${d.count} slide${d.count === 1 ? '' : 's'} · ${usedText(d.lastUsed)}`;
+      if (d.driveId) tool('Update from Drive', () => runImport({ deckId: id }));
+      tool('Clear drawings', () => {
+        if (confirm(`Erase every drawing in “${d.title}”?`)) remove(ref(db, P.inkDeck(S.uid, id)));
+      });
+      tool('Delete', () => deleteDeck(id, d), true);
+    }
+    const open = card.querySelector('.open');
+    if (isPresentable(d)) open.addEventListener('click', () => startDeck(S.uid, id));
+    else open.disabled = true;
     grid.insertBefore(card, add);
   }
+}
+
+async function deleteDeck(id, d) {
+  if (!confirm(`Delete “${d.title}” and its drawings? This can’t be undone.`)) return;
+  if (S.live && S.live.deckId === id) await endDeck(S.uid);
+  await Promise.all([
+    remove(ref(db, P.deck(S.uid, id))),
+    remove(ref(db, P.slides(S.uid, id))),
+    remove(ref(db, P.notesAll(S.uid, id))),
+    remove(ref(db, P.inkDeck(S.uid, id))),
+  ]);
 }
 
 function usedText(ts) {
@@ -156,16 +193,11 @@ async function renderPage(page, width, quality) {
 }
 
 let adding = false;
-async function addDeck(file) {
-  if (adding || !file) return;
-  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
-    alert('Please choose a PDF. In Google Slides: File › Download › PDF document.');
-    return;
-  }
+async function addPdf(file) {
+  if (adding) return;
   adding = true;
-  const card = $('addCard');
   const sub = $('addSub');
-  card.classList.add('busy');
+  $('addCard').classList.add('busy');
   try {
     sub.textContent = 'Opening the PDF…';
     const pdfjs = await loadPdfjs();
@@ -196,21 +228,160 @@ async function addDeck(file) {
     alert(`That PDF couldn’t be added: ${err.message || err}`);
   } finally {
     adding = false;
-    card.classList.remove('busy');
-    sub.innerHTML = 'Drop a PDF from Google Slides<br>(File › Download › PDF)';
-    $('pdfInput').value = '';
+    $('addCard').classList.remove('busy');
+    resetAddText();
   }
 }
 
-$('pdfInput').addEventListener('change', (e) => addDeck(e.target.files[0]));
+function resetAddText() {
+  $('addSub').textContent = 'or drop a PDF or PowerPoint here';
+}
+
+function addFile(file) {
+  if (!file) return;
+  if (/\.pptx$/i.test(file.name) || file.type === PPTX_MIME) runImport({ file });
+  else if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') addPdf(file);
+  else alert('Slide Remote takes PDF and PowerPoint (.pptx) files, or decks straight from Google Drive.');
+  $('fileInput').value = '';
+}
+
+$('fileInput').addEventListener('change', (e) => addFile(e.target.files[0]));
+$('driveBtn').addEventListener('click', async () => {
+  try {
+    const token = await getDriveToken();
+    const doc = await pickDeck(token);
+    if (doc) runImport({ doc });
+  } catch (err) {
+    alert(err.message || err);
+  }
+});
 const addCard = $('addCard');
 addCard.addEventListener('dragover', (e) => { e.preventDefault(); addCard.classList.add('drag'); });
 addCard.addEventListener('dragleave', () => addCard.classList.remove('drag'));
 addCard.addEventListener('drop', (e) => {
   e.preventDefault();
   addCard.classList.remove('drag');
-  addDeck(e.dataTransfer.files[0]);
+  addFile(e.dataTransfer.files[0]);
 });
+
+// ---------- Importing through Google (Drive decks and PowerPoint files) ----------
+/**
+ * One import job. Starts a new deck ({doc} picked in Drive, or {file} uploaded),
+ * or updates/retries an existing Drive deck ({deckId}).
+ * Slides go into a fresh version folder; the deck switches over only when every slide is in,
+ * so whatever is on the projector is never disturbed.
+ */
+async function runImport({ doc = null, file = null, deckId = null }) {
+  if (deckId && S.jobs[deckId]) return;
+  const existing = deckId ? S.decks[deckId] : null;
+  let token;
+  try {
+    token = await getDriveToken();
+  } catch (err) {
+    alert(err.message || err);
+    return;
+  }
+  const source = existing
+    ? { id: existing.driveId, mimeType: existing.driveMime, name: existing.title }
+    : doc;
+
+  const id = deckId || push(ref(db, P.decks(S.uid))).key;
+  const rev = ((existing && Math.max(existing.rev || 0, existing.pendingRev || 0)) || 0) + 1;
+  S.jobs[id] = true;
+  let tempId = null;
+  try {
+    const base = { status: 'importing', progress: { done: 0, total: 0 }, pendingRev: rev };
+    if (existing) {
+      // A stopped attempt may have left part of a version behind; clear it first.
+      if (existing.pendingRev && existing.pendingRev !== existing.rev) await remove(ref(db, P.slideSet(S.uid, id, existing.pendingRev)));
+      await update(ref(db, P.deck(S.uid, id)), base);
+    } else {
+      await set(ref(db, P.deck(S.uid, id)), {
+        ...base,
+        title: file ? file.name.replace(/\.pptx$/i, '') : doc.name.replace(/\.pptx$/i, ''),
+        count: 0,
+        created: Date.now(),
+        lastUsed: 0,
+        ...(doc ? { driveId: doc.id, driveMime: doc.mimeType } : {}),
+      });
+    }
+    renderDecks();
+
+    let presId = source ? source.id : null;
+    if (file) tempId = await uploadAndConvert(token, file);
+    else if (source.mimeType === PPTX_MIME) tempId = await convertInDrive(token, source.id, source.name);
+    if (tempId) presId = tempId;
+
+    const info = await readDeck(token, presId);
+    const total = info.slideIds.length;
+    if (!total) throw new Error('That deck has no slides.');
+    await update(ref(db, P.deck(S.uid, id)), { progress: { done: 0, total } });
+
+    // Two at a time: faster, while staying under Google's limits (drive.js slows down if asked).
+    let next = 0;
+    let done = 0;
+    let thumb = '';
+    const worker = async () => {
+      while (next < total) {
+        const i = next++;
+        const pic = await slidePicture(token, presId, info.slideIds[i]);
+        await set(ref(db, P.slide(S.uid, id, i, rev)), pic);
+        if (i === 0) thumb = await toJpeg(pic, 480, 0.7);
+        done++;
+        update(ref(db, P.deck(S.uid, id)), { progress: { done, total } });
+      }
+    };
+    await Promise.all([worker(), worker()]);
+
+    const hasNotes = info.notes.some(Boolean);
+    if (hasNotes) await set(ref(db, P.notes(S.uid, id, rev)), info.notes);
+
+    const oldRev = existing && existing.rev;
+    // The switch-over: one update, so both devices see the whole new version at once.
+    await update(ref(db, P.deck(S.uid, id)), {
+      // A converted PowerPoint's own title is the temporary copy's name, so use the file's name.
+      title: existing ? existing.title : (file ? file.name : (tempId ? doc.name : info.title)).replace(/\.pptx$/i, ''),
+      count: total,
+      aspect: info.aspect,
+      thumb,
+      slideIds: info.slideIds,
+      hasNotes,
+      rev,
+      updated: Date.now(),
+      status: null,
+      progress: null,
+      pendingRev: null,
+    });
+    if (oldRev && oldRev !== rev) {
+      remove(ref(db, P.slideSet(S.uid, id, oldRev)));
+      remove(ref(db, P.notes(S.uid, id, oldRev)));
+    }
+    if (S.live && S.live.deckId === id && (S.live.slide || 0) >= total) {
+      update(ref(db, P.live(S.uid)), { slide: total - 1 });
+    }
+    // Drawings for slides that were deleted from the deck.
+    const inkSnap = await get(ref(db, P.inkDeck(S.uid, id)));
+    for (const k of staleInkKeys(Object.keys(inkSnap.val() || {}), info.slideIds)) remove(ref(db, P.ink(S.uid, id, k)));
+  } catch (err) {
+    alert(`That deck couldn’t be brought in: ${err.message || err}`);
+  } finally {
+    if (tempId) deleteFile(token, tempId);
+    delete S.jobs[id];
+    renderDecks();
+  }
+}
+
+/** Give up on a stopped import: remove a deck that never finished, or keep the last good version. */
+async function abandonImport(id) {
+  const d = S.decks[id];
+  if (!d) return;
+  if (!d.rev) {
+    await Promise.all([remove(ref(db, P.deck(S.uid, id))), remove(ref(db, P.slides(S.uid, id)))]);
+    return;
+  }
+  if (d.pendingRev && d.pendingRev !== d.rev) await remove(ref(db, P.slideSet(S.uid, id, d.pendingRev)));
+  await update(ref(db, P.deck(S.uid, id)), { status: null, progress: null, pendingRev: null });
+}
 
 // ---------- Phones and pairing ----------
 const CHECK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E7B4A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L19 7"/></svg>';
@@ -308,21 +479,9 @@ $('pairDialog').addEventListener('close', dropCode);
 window.addEventListener('beforeunload', () => { if (S.pairCode) remove(ref(db, P.pairing(S.pairCode))); });
 
 // ---------- Presenting ----------
-function loadSlides(deckId) {
-  if (S.slides[deckId]) return Promise.resolve(S.slides[deckId]);
-  if (!S.loading[deckId]) {
-    S.loading[deckId] = get(ref(db, P.slides(S.uid, deckId))).then((snap) => {
-      const v = snap.val() || [];
-      S.slides[deckId] = Array.isArray(v) ? v : Object.keys(v).sort((a, b) => a - b).map((k) => v[k]);
-      delete S.loading[deckId];
-      return S.slides[deckId];
-    });
-  }
-  return S.loading[deckId];
-}
-
 function currentDeck() {
-  return S.live && S.live.deckId ? S.decks[S.live.deckId] : null;
+  const d = S.live && S.live.deckId ? S.decks[S.live.deckId] : null;
+  return isPresentable(d) ? d : null;
 }
 
 async function applyLive() {
@@ -341,7 +500,7 @@ async function applyLive() {
   renderPill();
 
   // Ink for this slide (or the whiteboard).
-  const path = P.ink(S.uid, live.deckId, inkKey(live));
+  const path = P.ink(S.uid, live.deckId, inkKey(live, deck));
   if (path !== S.inkPath) {
     if (S.inkSub) S.inkSub();
     S.inkPath = path;
@@ -350,9 +509,10 @@ async function applyLive() {
     S.inkSub = onValue(ref(db, path), (snap) => { S.ink = snap.val() || {}; drawInk(); });
   }
 
-  const slides = await loadSlides(live.deckId);
+  const i = live.slide || 0;
+  slides.warm(live.deckId, deck, i);
+  const src = await slides.slide(live.deckId, deck, i);
   if (S.live !== live) return; // something newer arrived while loading
-  const src = slides[live.slide || 0] || '';
   const img = $('slideImg');
   if (img.getAttribute('src') !== src) img.src = src;
 }

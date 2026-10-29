@@ -5,8 +5,9 @@ import {
 } from './firebase.js';
 import {
   PENS, HIGHLIGHT, PEN_WIDTH, HIGHLIGHT_WIDTH, encodePoints, fitBox, renderInk,
-  strokesHit, inkKey, isValidCode,
+  strokesHit, inkKey, isValidCode, isPresentable, CODE_LENGTH,
 } from './core.js';
+import { createSlideCache } from './slides.js';
 import { startDeck, endDeck, step, toggleMode } from './live.js';
 
 const $ = (id) => document.getElementById(id);
@@ -20,14 +21,14 @@ function showScreen(id) {
 
 window.__appStarted = true;
 
+const slides = createSlideCache(() => S.owner);
+
 const S = {
   uid: null,
   owner: localStorage.getItem(OWNER_KEY),
   decks: {},
   live: null,
   projectorOn: false,
-  slides: {},
-  loading: {},
   ink: {},
   inkPath: null,
   inkSub: null,
@@ -93,14 +94,14 @@ function phoneName() {
 }
 
 $('codeInput').addEventListener('input', (e) => {
-  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, CODE_LENGTH);
   setupError('');
 });
 
 $('codeForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const code = $('codeInput').value.trim();
-  if (!isValidCode(code)) { setupError('The code is six numbers.'); return; }
+  if (!isValidCode(code)) { setupError(`The code is ${CODE_LENGTH} numbers.`); return; }
   if (!S.uid) { setupError('Still connecting. Try again in a moment.'); return; }
   $('connectBtn').disabled = true;
   try {
@@ -149,7 +150,8 @@ function renderStatus() {
 }
 
 function currentDeck() {
-  return S.live && S.live.deckId ? S.decks[S.live.deckId] : null;
+  const d = S.live && S.live.deckId ? S.decks[S.live.deckId] : null;
+  return isPresentable(d) ? d : null;
 }
 
 function route() {
@@ -165,7 +167,7 @@ function showDecks() {
   showScreen('decks');
   const list = $('deckList');
   list.innerHTML = '';
-  const entries = Object.entries(S.decks).sort((a, b) => (b[1].lastUsed || b[1].created || 0) - (a[1].lastUsed || a[1].created || 0));
+  const entries = Object.entries(S.decks).filter(([, d]) => isPresentable(d)).sort((a, b) => (b[1].lastUsed || b[1].created || 0) - (a[1].lastUsed || a[1].created || 0));
   $('deckEmpty').hidden = entries.length > 0;
   for (const [id, d] of entries) {
     const b = document.createElement('button');
@@ -181,19 +183,6 @@ function showDecks() {
 }
 
 // ---------- Remote ----------
-function loadSlides(deckId) {
-  if (S.slides[deckId]) return Promise.resolve(S.slides[deckId]);
-  if (!S.loading[deckId]) {
-    S.loading[deckId] = get(ref(db, P.slides(S.owner, deckId))).then((snap) => {
-      const v = snap.val() || [];
-      S.slides[deckId] = Array.isArray(v) ? v : Object.keys(v).sort((a, b) => a - b).map((k) => v[k]);
-      delete S.loading[deckId];
-      return S.slides[deckId];
-    });
-  }
-  return S.loading[deckId];
-}
-
 async function showRemote(deck) {
   const live = S.live;
   const wasHidden = $('remote').hidden;
@@ -208,23 +197,29 @@ async function showRemote(deck) {
   $('veil').hidden = live.mode !== 'hidden';
   $('deckTitle').textContent = deck.title || '';
 
-  const n = (live.slide || 0) + 1;
-  const label = live.mode === 'whiteboard' ? 'Whiteboard' : `Slide ${n} of ${deck.count}`;
-  $('counter').textContent = label;
+  const i = live.slide || 0;
+  const n = i + 1;
+  $('counter').textContent = live.mode === 'whiteboard' ? 'Whiteboard' : `Slide ${n} of ${deck.count}`;
   $('sideCount').textContent = live.mode === 'whiteboard' ? 'Board' : `${n} / ${deck.count}`;
   document.querySelectorAll('[data-action="whiteboard"]').forEach((b) => b.setAttribute('aria-pressed', String(live.mode === 'whiteboard')));
   document.querySelectorAll('[data-action="hidden"]').forEach((b) => b.setAttribute('aria-pressed', String(live.mode === 'hidden')));
 
-  watchInk(P.ink(S.owner, live.deckId, inkKey(live)));
+  watchInk(P.ink(S.owner, live.deckId, inkKey(live, deck)));
 
-  const slides = await loadSlides(live.deckId);
+  slides.warm(live.deckId, deck, i);
+  const [src, next, notes] = await Promise.all([
+    slides.slide(live.deckId, deck, i),
+    slides.slide(live.deckId, deck, i + 1),
+    slides.deckNotes(live.deckId, deck),
+  ]);
   if (S.live !== live) return;
   const img = $('slideImg');
-  const src = slides[live.slide || 0] || '';
   if (img.getAttribute('src') !== src) img.src = src;
-  const next = slides[(live.slide || 0) + 1];
   $('nextImg').src = next || '';
-  $('nextText').textContent = next ? `Up next: slide ${n + 1}` : 'This is the last slide.';
+  $('nextText').textContent = i + 1 < deck.count ? `Up next: slide ${n + 1}` : 'This is the last slide.';
+  const note = live.mode === 'whiteboard' ? '' : (notes[i] || '');
+  $('notesText').textContent = note;
+  $('upnext').classList.toggle('has-notes', !!note);
   layout();
 }
 

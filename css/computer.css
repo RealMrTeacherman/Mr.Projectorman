@@ -44,7 +44,11 @@
 }
 .deck .name { font-size: 16px; font-weight: 600; padding: 0 4px; }
 .deck .meta { font-size: 13px; color: var(--muted); padding: 0 4px; }
-.deck .tools { display: flex; gap: 14px; padding: 0 4px 2px; }
+.deck .tools { display: flex; flex-wrap: wrap; column-gap: 14px; padding: 0 4px 2px; }
+.deck .open:disabled { cursor: default; }
+.deck .open:disabled .thumb { opacity: 0.55; }
+.progress { height: 6px; border-radius: 999px; background: #E1E6EC; overflow: hidden; margin: 0 4px; }
+.progress .bar { display: block; height: 100%; background: var(--blue); border-radius: 999px; transition: width 0.3s; }
 
 .linkish {
   appearance: none; background: none; border: 0; padding: 4px 0; cursor: pointer;
@@ -56,8 +60,10 @@
 .add-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   border: 2px dashed #A9B3C1; border-radius: 14px; padding: 16px; color: #3E4A5C;
-  min-height: 210px; cursor: pointer; text-align: center;
+  min-height: 210px; text-align: center;
 }
+.add-card .btn { width: 100%; max-width: 220px; }
+.file-btn { display: inline-flex; align-items: center; justify-content: center; }
 .add-card:hover, .add-card.drag { background: var(--blue-soft); border-color: var(--blue); }
 .add-card.busy { cursor: progress; }
 .add-title { font-size: 16px; font-weight: 600; }
@@ -76,7 +82,7 @@ dialog h2 { margin: 0 0 12px; font-size: 22px; }
 dialog h3 { margin: 22px 0 8px; font-size: 16px; }
 .pair-steps { margin: 0; padding-left: 22px; line-height: 1.6; }
 .code {
-  font-size: 56px; font-weight: 700; letter-spacing: 0.18em; text-align: center;
+  font-size: 48px; font-weight: 700; letter-spacing: 0.12em; text-align: center;
   margin: 16px 0 8px; font-variant-numeric: tabular-nums;
 }
 .phone-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

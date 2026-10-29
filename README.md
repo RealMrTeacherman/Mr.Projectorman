@@ -26,12 +26,18 @@ A separate project from Planbook keeps the two apps' rules from tangling. The fr
 1. On the classroom computer, open the computer link and sign in with Google.
    If your district account blocks the sign-in, use a personal Gmail; just use the same one every time.
 2. On your phone, open the same link in **Safari** (Chrome on Android), tap **Share › Add to Home Screen**, then open **Slide Remote from the Home Screen**.
-3. On the computer, click **Phones and pairing**. Type the 6-digit code into your phone.
+3. On the computer, click **Phones and pairing**. Type the 8-digit code into your phone.
 
 That's the only time you'll see a code. From then on, open the page on the computer and tap the icon on your phone; they find each other.
 
+### 4. Google Drive import (one time, about 10 minutes)
+In [console.cloud.google.com](https://console.cloud.google.com), with the MrProjectorman project selected:
+1. Enable **Google Drive API**, **Google Slides API**, and **Google Picker API** (search each by name).
+2. **Google Auth Platform** (or "OAuth consent screen"): Audience **Internal** if offered; under **Data Access**, add the scope ending in `/auth/drive.file`.
+3. **Credentials › Browser key (auto created by Firebase):** under API restrictions, include **Google Picker API**; under Application restrictions, choose **Websites** and add `https://realmrteacherman.github.io/*`.
+
 ## Everyday use
-1. In Google Slides: **File › Download › PDF document**. Drop the PDF onto **Add a deck** on the computer.
+1. On the computer, click **From Google Drive** and pick a Google Slides deck or PowerPoint, or drag a PDF or PowerPoint file onto **Add a deck**. Big decks take a few minutes to bring in the first time; the card shows progress, and you can present other decks meanwhile.
 2. Tap the deck on your phone (or click it on the computer). Click the projector screen once for full screen.
 3. Draw, highlight, erase, Next/Back from your phone. Turn the phone sideways for a bigger drawing area.
 
@@ -41,14 +47,17 @@ That's the only time you'll see a code. From then on, open the page on the compu
 
 Drawings stay on each slide until you clear them. To start fresh, use **Clear drawings** on the deck card.
 
+**Changed a deck in Google Slides?** Click **Update from Drive** on its card. Drawings follow their slides even if you reordered them; drawings on slides you deleted are cleaned up. The old version stays on screen until the new one is fully in. (Decks added as PDF or uploaded PowerPoint files don't have this link; delete and re-add them instead.)
+
 ## Privacy
 Slide images and drawings sync live through Firebase, like Planbook's non-student data. Keep student names, photos, and other identifying information out of decks you present with Slide Remote.
 
-## What v1 doesn't do (yet)
-- Speaker notes: Google's PDF export doesn't include them, so the phone shows a preview of the next slide instead.
-- Animations, transitions, and videos: the PDF is a still picture of each slide.
+Slide Remote stores Drive access only in the open page, for under an hour; it's never saved. Your phone never has Drive access.
+
+## What it doesn't do (yet)
+- Animations, transitions, and videos: each slide comes in as a still picture.
 - Pinch to zoom on the phone, and a partial eraser (the eraser removes whole lines).
-- Editing a deck: after changing the Google Slides, upload the new PDF and delete the old deck.
+- Speaker notes come only from Google Drive decks (including PowerPoints brought in through Google), not from PDFs.
 
 ## Tests
 - Unit tests (no setup): `node --test tests/core.test.mjs`
@@ -60,7 +69,10 @@ Slide images and drawings sync live through Firebase, like Planbook's non-studen
 |---|---|
 | `index.html`, `js/computer.js`, `css/computer.css` | Classroom computer: decks, pairing, projector view |
 | `remote.html`, `js/remote.js`, `css/remote.css` | Phone remote |
-| `js/core.js` | Drawing math and stroke rendering (unit tested) |
+| `js/core.js` | Drawing math, stroke rendering, notes reading (unit tested) |
+| `js/drive.js` | Google Drive and Slides: permission, picker, PowerPoint conversion, slide pictures |
+| `js/slides.js` | Loads slide pictures as needed and keeps nearby ones ready |
+| `drive-test.html`, `js/drive-test.js` | Step-by-step check that Drive import works for an account |
 | `js/live.js` | Next/Back/Whiteboard/Hide actions shared by both devices |
 | `js/firebase.js` | Firebase setup and every database path |
 | `js/config.js` | Your Firebase settings |

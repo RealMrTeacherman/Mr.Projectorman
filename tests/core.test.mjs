@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   encodePoints, decodePoints, fitBox, distToSegment, hitStroke, strokesHit,
-  clampSlide, makeCode, isValidCode, inkKey, PEN_WIDTH,
+  clampSlide, makeCode, isValidCode, inkKey, staleInkKeys, neighbors, isPresentable, PEN_WIDTH,
 } from '../js/core.js';
 
 test('points survive an encode/decode round trip (rounded to 4 places)', () => {
@@ -70,13 +70,13 @@ test('clampSlide keeps navigation in range', () => {
   assert.equal(clampSlide(3, 0), 0);
 });
 
-test('pairing codes are always six digits', () => {
-  assert.equal(makeCode(() => 0), '000000');
-  assert.equal(makeCode(() => 0.0000421), '000042');
-  assert.equal(makeCode(() => 0.9999999), '999999');
+test('pairing codes are always eight digits', () => {
+  assert.equal(makeCode(() => 0), '00000000');
+  assert.equal(makeCode(() => 0.0000000421), '00000004');
+  assert.equal(makeCode(() => 0.999999999), '99999999');
   assert.ok(isValidCode(makeCode()));
-  assert.equal(isValidCode('12345'), false);
-  assert.equal(isValidCode('12a456'), false);
+  assert.equal(isValidCode('123456'), false);
+  assert.equal(isValidCode('1234a678'), false);
 });
 
 test('ink key separates slides from the whiteboard', () => {
@@ -84,6 +84,33 @@ test('ink key separates slides from the whiteboard', () => {
   assert.equal(inkKey({ mode: 'hidden', slide: 3 }), '3');
   assert.equal(inkKey({ mode: 'whiteboard', slide: 3 }), 'wb');
   assert.equal(inkKey(null), null);
+});
+
+test('Drive decks key drawings by slide id, so they follow reordered slides', () => {
+  const before = { slideIds: ['a', 'b', 'c'] };
+  const after = { slideIds: ['c', 'a', 'b'] }; // slide c moved to the front
+  assert.equal(inkKey({ mode: 'slide', slide: 2 }, before), 's-c');
+  assert.equal(inkKey({ mode: 'slide', slide: 0 }, after), 's-c');
+  assert.equal(inkKey({ mode: 'whiteboard', slide: 0 }, after), 'wb');
+});
+
+test('drawings for deleted slides are found for cleanup; whiteboard is kept', () => {
+  assert.deepEqual(staleInkKeys(['s-a', 's-b', 'wb', 's-gone'], ['a', 'b']), ['s-gone']);
+  assert.deepEqual(staleInkKeys([], ['a']), []);
+});
+
+test('neighbors lists the slides to have ready, in order of need', () => {
+  assert.deepEqual(neighbors(0, 224), [0, 1, 2, 3]);
+  assert.deepEqual(neighbors(10, 224), [10, 11, 12, 9, 13]);
+  assert.deepEqual(neighbors(223, 224), [223, 222]);
+});
+
+test('a deck still on its first import cannot be presented; an updating one can', () => {
+  assert.equal(isPresentable({ count: 0, status: 'importing' }), false);
+  assert.equal(isPresentable({ count: 5, status: 'importing' }), false);
+  assert.equal(isPresentable({ count: 5, status: 'importing', rev: 1 }), true);
+  assert.equal(isPresentable({ count: 5 }), true);
+  assert.equal(isPresentable(null), false);
 });
 
 import { extractNotes } from '../js/core.js';

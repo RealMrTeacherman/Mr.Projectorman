@@ -58,8 +58,8 @@
       <h2>Enter the code from the computer</h2>
       <p>On the classroom computer, open Slide Remote and choose “Phones and pairing.”</p>
       <form id="codeForm" autocomplete="off">
-        <label for="codeInput" class="sr-only">Six-digit code</label>
-        <input id="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+        <label for="codeInput" class="sr-only">Eight-digit code</label>
+        <input id="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" placeholder="00000000">
         <button class="btn" type="submit" id="connectBtn">Connect</button>
       </form>
       <p class="setup-error" id="codeError" hidden></p>
@@ -131,9 +131,12 @@
     </button>
   </div>
 
-  <div class="upnext">
-    <img id="nextImg" alt="">
-    <span id="nextText"></span>
+  <div class="upnext" id="upnext">
+    <p class="notes" id="notesText"></p>
+    <div class="next-row">
+      <img id="nextImg" alt="">
+      <span id="nextText"></span>
+    </div>
   </div>
 
   <div class="nav">

@@ -27,7 +27,12 @@ let current = null;
 const isPhone = location.pathname.endsWith('remote.html');
 export function onAuthStateChanged(a, cb) { readyP.then(() => cb(isPhone ? current : { uid: 'owner1', displayName: 'Josh', isAnonymous: false })); a.listeners.push(cb); }
 export async function signInAnonymously(a) { current = { uid: 'phone1', isAnonymous: true }; a.listeners.forEach((cb) => cb(current)); }
-export class GoogleAuthProvider {}
+export class GoogleAuthProvider {
+  addScope() {}
+  setCustomParameters() {}
+  static credentialFromResult() { return { accessToken: 'fake-drive-token' }; }
+}
+export async function reauthenticateWithPopup(user) { window.__reauths = (window.__reauths || 0) + 1; return { user }; }
 export async function signInWithPopup() {}
 export async function signOut() {}
 export const ref = (_db, path) => ({ path });
@@ -42,6 +47,7 @@ export const limitToLast = (n) => ({ n });
 export const query = (r, ...cs) => ({ path: r.path, limit: cs.find((c) => c.n)?.n });
 export async function get(r) {
   await readyP;
+  if (/\/slides\//.test(r.path)) window.__slideGets = (window.__slideGets || 0) + 1;
   let v = getAt(tree, r.path);
   if (r.limit && v && typeof v === 'object') { const ks = Object.keys(v).sort().slice(-r.limit); v = Object.fromEntries(ks.map((k) => [k, v[k]])); }
   return snap(r.path, v);

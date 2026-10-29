@@ -2,7 +2,7 @@
 import { firebaseConfig } from './config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signOut,
+  getAuth, GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup, signInAnonymously, onAuthStateChanged, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getDatabase, ref, set, update, push, remove, get, onValue, onDisconnect,
@@ -30,7 +30,7 @@ if (configured) {
 export { app, auth, db, initError };
 
 export {
-  GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signOut,
+  GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup, signInAnonymously, onAuthStateChanged, signOut,
   ref, set, update, push, remove, get, onValue, onDisconnect, query, orderByKey, limitToLast,
 };
 
@@ -39,7 +39,12 @@ export const P = {
   decks: (u) => `users/${u}/decks`,
   deck: (u, d) => `users/${u}/decks/${d}`,
   slides: (u, d) => `users/${u}/slides/${d}`,
-  slide: (u, d, i) => `users/${u}/slides/${d}/${i}`,
+  // Drive decks store each version ("rev") separately, so updating never disturbs the one on screen.
+  // PDF decks (no rev) keep the original layout.
+  slideSet: (u, d, rev) => (rev ? `users/${u}/slides/${d}/r${rev}` : `users/${u}/slides/${d}`),
+  slide: (u, d, i, rev) => (rev ? `users/${u}/slides/${d}/r${rev}/${i}` : `users/${u}/slides/${d}/${i}`),
+  notesAll: (u, d) => `users/${u}/notes/${d}`,
+  notes: (u, d, rev) => `users/${u}/notes/${d}/r${rev}`,
   inkDeck: (u, d) => `users/${u}/ink/${d}`,
   ink: (u, d, k) => `users/${u}/ink/${d}/${k}`,
   live: (u) => `users/${u}/live`,

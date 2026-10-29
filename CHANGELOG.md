@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.0 (2026-10-29)
+- **Add from Google Drive:** Google Slides decks and PowerPoint files, any size, brought in slide by slide (two at a time, slowing down automatically if Google asks). Progress shows on the deck card; a stopped import can be retried or removed.
+- **PowerPoint uploads:** drop a .pptx on Add a deck; Google converts it and the temporary copy is deleted afterward.
+- **Update from Drive:** refreshes a Drive deck into a new version and switches over only when complete. Drawings are keyed by slide id, so they follow reordered slides; drawings on deleted slides are cleaned up.
+- **Load as needed:** both devices fetch the current slide plus a few nearby, keeping at most 40 in memory, so large decks open quickly on the phone.
+- **Speaker notes** from Drive decks show on the phone (upright), with a small up-next preview below.
+- **Pairing codes are now 8 digits** (database rules updated; already-paired phones stay paired).
+- Drive permission uses re-confirmation of the signed-in account, so picking a different Google account can't switch who's signed in. The permission is kept in memory only.
+- Tests: 20 unit tests; 66 end-to-end checks, including a fake Google Drive (import, notes, update with reordered and deleted slides, PowerPoint from Drive, PowerPoint upload, nearby-only loading).
+
 ## v1.0.2 (2026-10-29)
 - Phones opening the main link are sent to the remote automatically; computers and iPads stay on the projector page. `?computer` keeps a phone on the computer page.
 - The pairing window now gives the main link instead of remote.html.

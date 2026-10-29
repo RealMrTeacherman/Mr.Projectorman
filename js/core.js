@@ -93,13 +93,15 @@ export function clampSlide(n, count) {
   return Math.min(count - 1, Math.max(0, Math.trunc(n) || 0));
 }
 
-/** Six-digit pairing code. `rand` returns 0..1 (injectable for tests). */
+export const CODE_LENGTH = 8;
+
+/** Eight-digit pairing code. `rand` returns 0..1 (injectable for tests). */
 export function makeCode(rand = Math.random) {
-  return String(Math.floor(rand() * 1e6)).padStart(6, '0');
+  return String(Math.floor(rand() * 10 ** CODE_LENGTH)).padStart(CODE_LENGTH, '0');
 }
 
 export function isValidCode(code) {
-  return /^[0-9]{6}$/.test(String(code || ''));
+  return new RegExp(`^[0-9]{${CODE_LENGTH}}$`).test(String(code || ''));
 }
 
 /** Draw one stroke onto a 2D context sized w × h (CSS pixels). */
@@ -149,10 +151,35 @@ export function renderInk(canvas, strokes, w, h, dpr = 1, extra = null) {
   if (extra) drawStroke(ctx, extra, w, h);
 }
 
-/** Ink is stored per slide; the whiteboard uses its own key. */
-export function inkKey(live) {
+/**
+ * Where a slide's drawings live. Decks from Google Drive key drawings by the
+ * slide's own id, so they follow the slide when the deck is reordered or updated.
+ * PDF decks key them by position. The whiteboard has its own key.
+ */
+export function inkKey(live, deck) {
   if (!live) return null;
-  return live.mode === 'whiteboard' ? 'wb' : String(live.slide || 0);
+  if (live.mode === 'whiteboard') return 'wb';
+  const i = live.slide || 0;
+  const ids = deck && deck.slideIds;
+  if (ids && ids[i]) return `s-${ids[i]}`;
+  return String(i);
+}
+
+/** Drawing keys that belong to slides no longer in the deck (whiteboard always kept). */
+export function staleInkKeys(keys, slideIds) {
+  const keep = new Set((slideIds || []).map((id) => `s-${id}`));
+  return (keys || []).filter((k) => k !== 'wb' && !keep.has(k));
+}
+
+/** Slides worth having ready: this one, then the next few, then the one before. */
+export function neighbors(i, count) {
+  const order = [i, i + 1, i + 2, i - 1, i + 3];
+  return [...new Set(order.filter((n) => n >= 0 && n < count))];
+}
+
+/** Can this deck be shown yet? (A first import that hasn't finished can't.) */
+export function isPresentable(deck) {
+  return !!deck && deck.count > 0 && !(deck.status === 'importing' && !deck.rev);
 }
 
 /**
