@@ -1,10 +1,18 @@
-// Paste your Firebase web app config here (Firebase console → Project settings →
-// Your apps → Web app → "SDK setup and configuration" → Config).
-// These values are not secret; your database rules are what protect your data.
-export const firebaseConfig = {
-  apiKey: 'PASTE_ME',
-  authDomain: 'PASTE_ME',
-  databaseURL: 'PASTE_ME',
-  projectId: 'PASTE_ME',
-  appId: 'PASTE_ME',
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAhyrF9t_1z-rIB-OUSfBmqv-RCikOPw7c",
+  authDomain: "mrprojectorman.firebaseapp.com",
+  databaseURL: "https://mrprojectorman-default-rtdb.firebaseio.com",
+  projectId: "mrprojectorman",
+  storageBucket: "mrprojectorman.firebasestorage.app",
+  messagingSenderId: "871899467234",
+  appId: "1:871899467234:web:1284205bcc81fe47e13dbb"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
