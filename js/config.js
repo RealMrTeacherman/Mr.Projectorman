@@ -1,4 +1,4 @@
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyAhyrF9t_1z-rIB-OUSfBmqv-RCikOPw7c",
   authDomain: "mrprojectorman.firebaseapp.com",
   databaseURL: "https://mrprojectorman-default-rtdb.firebaseio.com",
