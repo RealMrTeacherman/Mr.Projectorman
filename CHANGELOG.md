@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.0 (2026-10-29)
+- **Ready to share:** only verified `@creswell.k12.or.us` Google accounts can sign in on the computer or keep decks, enforced by the database rules (new js/settings.js holds the domain for the page). Other accounts see a clear message with a button to switch accounts. Google's account chooser suggests school accounts.
+- **Getting started guide** for new teachers: three steps (phone, deck, present) that check off as they're done and disappear when finished.
+- Tests: 22 unit tests; 71 end-to-end checks (new: guide progress, non-district account turned away).
+
 ## v1.1.0 (2026-10-29)
 - **Add from Google Drive:** Google Slides decks and PowerPoint files, any size, brought in slide by slide (two at a time, slowing down automatically if Google asks). Progress shows on the deck card; a stopped import can be retried or removed.
 - **PowerPoint uploads:** drop a .pptx on Add a deck; Google converts it and the temporary copy is deleted afterward.

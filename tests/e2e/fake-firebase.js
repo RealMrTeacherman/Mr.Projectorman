@@ -25,7 +25,7 @@ export const auth = { listeners: [] };
 export const db = {};
 let current = null;
 const isPhone = location.pathname.endsWith('remote.html');
-export function onAuthStateChanged(a, cb) { readyP.then(() => cb(isPhone ? current : { uid: 'owner1', displayName: 'Josh', isAnonymous: false })); a.listeners.push(cb); }
+export function onAuthStateChanged(a, cb) { readyP.then(() => cb(isPhone ? current : { uid: 'owner1', displayName: 'Josh', isAnonymous: false, emailVerified: true, email: localStorage.getItem('fakeEmail') || 'jbiederman@creswell.k12.or.us' })); a.listeners.push(cb); }
 export async function signInAnonymously(a) { current = { uid: 'phone1', isAnonymous: true }; a.listeners.forEach((cb) => cb(current)); }
 export class GoogleAuthProvider {
   addScope() {}

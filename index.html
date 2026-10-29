@@ -46,6 +46,12 @@
   <p id="signInError" class="error" hidden></p>
 </section>
 
+<section id="notAllowed" class="notice" hidden>
+  <h1>Use your school account</h1>
+  <p id="notAllowedText"></p>
+  <button class="btn" id="switchAccountBtn" type="button">Sign in with a different account</button>
+</section>
+
 <main id="home" hidden>
   <header class="top">
     <div>
@@ -54,6 +60,34 @@
     </div>
     <div id="phoneChip" class="chip"></div>
   </header>
+
+  <section class="welcome" id="welcome" hidden aria-labelledby="welcomeTitle">
+    <h2 id="welcomeTitle">Getting started</h2>
+    <ol class="welcome-steps">
+      <li id="stepPhone">
+        <span class="wnum">1</span>
+        <div>
+          <strong>Set up your phone</strong>
+          <span>One time. Open this same link on your phone, add it to your Home Screen, and enter a code.</span>
+          <button class="btn" id="welcomePairBtn" type="button">Show me how</button>
+        </div>
+      </li>
+      <li id="stepDeck">
+        <span class="wnum">2</span>
+        <div>
+          <strong>Add a deck</strong>
+          <span>Click “From Google Drive” below and pick any Google Slides deck or PowerPoint. Big decks take a few minutes the first time.</span>
+        </div>
+      </li>
+      <li id="stepPresent">
+        <span class="wnum">3</span>
+        <div>
+          <strong>Present</strong>
+          <span>Tap the deck on your phone (or click it here), then click the projector screen once for full screen. Draw and change slides from your phone.</span>
+        </div>
+      </li>
+    </ol>
+  </section>
 
   <div class="intro">
     <h2>Choose a deck to present</h2>

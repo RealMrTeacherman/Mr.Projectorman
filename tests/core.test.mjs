@@ -149,3 +149,23 @@ test('extractNotes copes with missing data', () => {
   assert.deepEqual(extractNotes(null), []);
   assert.deepEqual(extractNotes({ slides: [{ objectId: 'x' }] }), [{ id: 'x', notes: '' }]);
 });
+
+import { isAllowedAccount, welcomeState } from '../js/core.js';
+
+test('only verified accounts on the school domain are allowed', () => {
+  const d = 'creswell.k12.or.us';
+  assert.equal(isAllowedAccount({ email: 'jbiederman@creswell.k12.or.us', emailVerified: true }, d), true);
+  assert.equal(isAllowedAccount({ email: 'Teacher@Creswell.K12.OR.US', emailVerified: true }, d), true);
+  assert.equal(isAllowedAccount({ email: 'someone@gmail.com', emailVerified: true }, d), false);
+  assert.equal(isAllowedAccount({ email: 'x@notcreswell.k12.or.us.evil.com', emailVerified: true }, d), false);
+  assert.equal(isAllowedAccount({ email: 'x@evilcreswell.k12.or.us', emailVerified: true }, d), false);
+  assert.equal(isAllowedAccount({ email: 'x@creswell.k12.or.us', emailVerified: false }, d), false);
+  assert.equal(isAllowedAccount({ isAnonymous: true }, d), false);
+  assert.equal(isAllowedAccount(null, d), false);
+});
+
+test('getting-started guide tracks the three steps and hides when done', () => {
+  assert.deepEqual(welcomeState({ decks: {}, remotes: {}, everPresented: false }), { steps: { phone: false, deck: false, present: false }, show: true });
+  assert.equal(welcomeState({ decks: { a: {} }, remotes: { r: {} }, everPresented: false }).show, true);
+  assert.equal(welcomeState({ decks: { a: {} }, remotes: { r: {} }, everPresented: true }).show, false);
+});

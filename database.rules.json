@@ -2,8 +2,8 @@
   "rules": {
     "users": {
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('remotes').child($uid).child(auth.uid).exists())",
-        ".write": "auth != null && (auth.uid === $uid || root.child('remotes').child($uid).child(auth.uid).exists())"
+        ".read": "auth != null && ((auth.uid === $uid && auth.token.email_verified === true && auth.token.email.matches(/.*@creswell\\.k12\\.or\\.us$/)) || root.child('remotes').child($uid).child(auth.uid).exists())",
+        ".write": "auth != null && ((auth.uid === $uid && auth.token.email_verified === true && auth.token.email.matches(/.*@creswell\\.k12\\.or\\.us$/)) || root.child('remotes').child($uid).child(auth.uid).exists())"
       }
     },
     "remotes": {
@@ -18,7 +18,7 @@
     "pairing": {
       "$code": {
         ".read": "auth != null",
-        ".write": "auth != null && ((!data.exists() && newData.child('owner').val() === auth.uid) || (data.exists() && data.child('owner').val() === auth.uid))",
+        ".write": "auth != null && ((!data.exists() && newData.child('owner').val() === auth.uid && auth.token.email_verified === true && auth.token.email.matches(/.*@creswell\\.k12\\.or\\.us$/)) || (data.exists() && data.child('owner').val() === auth.uid))",
         ".validate": "newData.hasChildren(['owner', 'expires']) && $code.matches(/^[0-9]{8}$/)"
       }
     }

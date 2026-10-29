@@ -4,7 +4,8 @@ import {
   configured, missingKeys, initError, auth, db, P, ref, set, update, push, remove, get, onValue,
   GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, stayPresent, keepAwake,
 } from './firebase.js';
-import { fitBox, renderInk, inkKey, makeCode, staleInkKeys, isPresentable } from './core.js';
+import { fitBox, renderInk, inkKey, makeCode, staleInkKeys, isPresentable, isAllowedAccount, welcomeState } from './core.js';
+import { ALLOWED_DOMAIN, SCHOOL_NAME } from './settings.js';
 import { createSlideCache } from './slides.js';
 import {
   SLIDES_MIME, PPTX_MIME, getDriveToken, pickDeck, convertInDrive, uploadAndConvert, deleteFile,
@@ -47,8 +48,17 @@ if (!configured) {
     if (!user || user.isAnonymous) {
       show('signedOut', true);
       show('home', false);
+      show('notAllowed', false);
       return;
     }
+    if (!isAllowedAccount(user, ALLOWED_DOMAIN)) {
+      show('signedOut', false);
+      show('home', false);
+      $('notAllowedText').textContent = `You’re signed in as ${user.email || 'an account'}. Slide Remote is set up for ${SCHOOL_NAME} accounts (ending in @${ALLOWED_DOMAIN}).`;
+      show('notAllowed', true);
+      return;
+    }
+    show('notAllowed', false);
     if (S.uid === user.uid) return;
     S.uid = user.uid;
     S.name = user.displayName || user.email || 'you';
@@ -62,22 +72,44 @@ if (!configured) {
 $('signInBtn').addEventListener('click', async () => {
   $('signInError').hidden = true;
   try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    await signInWithPopup(auth, schoolProvider());
   } catch (err) {
     $('signInError').textContent = `Sign-in didn’t finish (${err.code || err.message}). If a popup was blocked, allow popups for this site and try again.`;
     $('signInError').hidden = false;
   }
 });
+function schoolProvider() {
+  const provider = new GoogleAuthProvider();
+  // Suggest school accounts in Google's account chooser.
+  provider.setCustomParameters({ hd: ALLOWED_DOMAIN, prompt: 'select_account' });
+  return provider;
+}
+$('switchAccountBtn').addEventListener('click', () => signOut(auth));
+
 $('signOutBtn').addEventListener('click', () => signOut(auth).then(() => location.reload()));
 
 function begin() {
   const u = S.uid;
   stayPresent(P.projectorOnline(u));
-  onValue(ref(db, P.decks(u)), (snap) => { S.decks = snap.val() || {}; renderDecks(); applyLive(); });
-  onValue(ref(db, P.remotes(u)), (snap) => { S.remotes = snap.val() || {}; renderPhones(); checkNewPhone(); });
+  onValue(ref(db, P.decks(u)), (snap) => { S.decks = snap.val() || {}; renderDecks(); applyLive(); renderWelcome(); });
+  onValue(ref(db, P.remotes(u)), (snap) => { S.remotes = snap.val() || {}; renderPhones(); checkNewPhone(); renderWelcome(); });
   onValue(ref(db, P.phonesOnline(u)), (snap) => { S.phonesOnline = snap.val() || {}; renderPhones(); renderPill(); });
   onValue(ref(db, P.live(u)), (snap) => { S.live = snap.val(); applyLive(); renderDecks(); });
+  onValue(ref(db, P.everPresented(u)), (snap) => { S.everPresented = snap.val() === true; renderWelcome(); });
 }
+
+// ---------- Getting started ----------
+function renderWelcome() {
+  if (S.everPresented === undefined) return; // wait until we know
+  // Anyone who presented before the guide existed has a deck with lastUsed set.
+  const presented = S.everPresented || Object.values(S.decks).some((d) => d && d.lastUsed);
+  const { steps, show: visible } = welcomeState({ decks: S.decks, remotes: S.remotes, everPresented: presented });
+  $('welcome').hidden = !visible;
+  $('stepPhone').classList.toggle('done', steps.phone);
+  $('stepDeck').classList.toggle('done', steps.deck);
+  $('stepPresent').classList.toggle('done', steps.present);
+}
+$('welcomePairBtn').addEventListener('click', () => openPairing());
 
 // ---------- Deck grid ----------
 function renderDecks() {
@@ -519,6 +551,7 @@ async function applyLive() {
 
 function startPresentingUI() {
   S.presenting = true;
+  if (!S.everPresented) set(ref(db, P.everPresented(S.uid)), true);
   show('home', false);
   show('stage', true);
   keepAwake().then((l) => { S.wake = l; });

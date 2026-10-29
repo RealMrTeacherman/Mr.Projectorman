@@ -107,6 +107,9 @@ try:
     comp.wait_for_selector('#home:not([hidden])')
     check('computer shows home after sign-in', comp.is_visible('#home'))
     check('chip invites phone setup', 'Set up your phone' in comp.inner_text('#phoneChip'))
+    comp.wait_for_selector('#welcome:not([hidden])')
+    check('new teacher sees the Getting started guide', comp.is_visible('#welcome') and comp.locator('.welcome-steps li.done').count() == 0)
+    comp.screenshot(path='shots/00-computer-welcome.png')
 
     comp.set_input_files('#fileInput', 'test-deck.pdf')
     comp.wait_for_selector('.deck', timeout=20000)
@@ -114,6 +117,8 @@ try:
     deck_id, deck = list(d['users']['owner1']['decks'].items())[0]
     check('deck saved with 3 slides', deck['count'] == 3 and len(d['users']['owner1']['slides'][deck_id]) == 3)
     check('deck title from filename', deck['title'] == 'test-deck')
+    comp.wait_for_selector('#stepDeck.done')
+    check('guide marks "Add a deck" done', True)
     comp.screenshot(path='shots/01-computer-home.png')
 
     comp.click('#pairLink')
@@ -139,6 +144,7 @@ try:
     comp.click('#closePairBtn')
     comp.wait_for_function("document.getElementById('phoneChip').textContent.includes('connected')", polling=100)
     check('chip shows phone connected', 'Your phone is connected' in comp.inner_text('#phoneChip'))
+    check('guide marks "Set up your phone" done', comp.locator('#stepPhone.done').count() == 1 and comp.is_visible('#welcome'))
     phone.screenshot(path='shots/04-phone-decks.png')
 
     # Reopen phone: should reconnect without a code
@@ -181,6 +187,7 @@ try:
     phone.click('.nav [data-action="next"]')
     comp.wait_for_function("document.getElementById('pillText').textContent === '2 / 3'", polling=100)
     check('Next moves the projector', True)
+    phone.wait_for_function("document.getElementById('counter').textContent === 'Slide 2 of 3'", polling=100, timeout=3000)
     check('phone counter updates', phone.inner_text('#counter') == 'Slide 2 of 3')
     phone.click('.nav [data-action="next"]'); phone.click('.nav [data-action="next"]'); time.sleep(0.3)
     check('cannot go past the last slide', comp.inner_text('#pillText') == '3 / 3')
@@ -234,6 +241,7 @@ try:
     phone.click('.top [data-action="decks"]')
     comp.wait_for_selector('#home:not([hidden])')
     check('choosing another deck returns computer to home', comp.is_visible('#home'))
+    check('guide disappears once all three steps are done', comp.is_hidden('#welcome'))
     check('phone back on deck list', phone.is_visible('#decks'))
 
 
@@ -336,6 +344,13 @@ try:
     gets = phone.evaluate('window.__slideGets')
     check(f'phone loaded only nearby slides of a 30-slide deck ({gets} fetched)', 0 < gets <= 6)
     phone.click('.top [data-action="decks"]'); comp.wait_for_selector('#home:not([hidden])')
+
+    # Non-district Google accounts are turned away with a clear message
+    gctx = br.new_context(); gp = gctx.new_page()
+    gp.goto(B+'index.html'); gp.evaluate("localStorage.setItem('fakeEmail', 'someone@gmail.com')"); gp.reload()
+    gp.wait_for_selector('#notAllowed:not([hidden])', timeout=5000)
+    check('a Gmail account is told to use a school account', 'creswell.k12.or.us' in gp.inner_text('#notAllowedText') and gp.is_hidden('#home'))
+    gp.screenshot(path='shots/12-not-allowed.png'); gctx.close()
 
     # Phones opening the main link land on the remote; computers and tablets stay put.
     devices = {

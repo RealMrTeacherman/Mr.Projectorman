@@ -197,3 +197,20 @@ export function extractNotes(presentation) {
     return { id: s.objectId, notes: text.trim() };
   });
 }
+
+/** Is this a verified Google account on the allowed domain? */
+export function isAllowedAccount(user, domain) {
+  if (!user || user.isAnonymous || !domain) return false;
+  const email = String(user.email || '').toLowerCase();
+  return user.emailVerified !== false && email.endsWith(`@${domain.toLowerCase()}`);
+}
+
+/** Which "Getting started" steps are done, and whether to show the guide at all. */
+export function welcomeState({ decks, remotes, everPresented }) {
+  const steps = {
+    phone: Object.keys(remotes || {}).length > 0,
+    deck: Object.keys(decks || {}).length > 0,
+    present: !!everPresented,
+  };
+  return { steps, show: !(steps.phone && steps.deck && steps.present) };
+}

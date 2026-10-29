@@ -49,6 +49,13 @@ Drawings stay on each slide until you clear them. To start fresh, use **Clear dr
 
 **Changed a deck in Google Slides?** Click **Update from Drive** on its card. Drawings follow their slides even if you reordered them; drawings on slides you deleted are cleaned up. The old version stays on screen until the new one is fully in. (Decks added as PDF or uploaded PowerPoint files don't have this link; delete and re-add them instead.)
 
+## Sharing with colleagues
+Colleagues don't need their own copy. They open the same link and sign in with their own school account; every teacher's decks, drawings, and phones are kept separate. Only accounts ending in `@creswell.k12.or.us` can sign in (set in `js/settings.js` and enforced in `database.rules.json`; change both together if this is ever used elsewhere).
+
+New teachers see a three-step **Getting started** guide that disappears once they've paired a phone, added a deck, and presented.
+
+As the owner of the Firebase project, you can see everyone's stored slides in the Firebase console. The free plan comfortably covers a few teachers; if many colleagues join, check usage under Firebase › Realtime Database › Usage.
+
 ## Privacy
 Slide images and drawings sync live through Firebase, like Planbook's non-student data. Keep student names, photos, and other identifying information out of decks you present with Slide Remote.
 

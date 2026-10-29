@@ -120,3 +120,21 @@ dialog h3 { margin: 22px 0 8px; font-size: 16px; }
 @media (max-width: 700px) {
   #home { padding: 24px 20px; }
 }
+
+/* Getting started */
+.welcome { background: var(--surface); border: 2px solid var(--blue); border-radius: 16px; padding: 20px 24px; }
+.welcome h2 { margin: 0 0 14px; font-size: 20px; }
+.welcome-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.welcome-steps li { display: flex; gap: 12px; }
+.welcome-steps li > div { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.welcome-steps strong { font-size: 16px; }
+.welcome-steps span { font-size: 14px; color: var(--muted); line-height: 1.45; }
+.wnum {
+  flex: none; width: 30px; height: 30px; border-radius: 999px; background: var(--blue); color: #fff !important;
+  display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px !important;
+}
+.welcome-steps li.done .wnum { background: var(--green); font-size: 0 !important; }
+.welcome-steps li.done .wnum::after { content: "✓"; font-size: 16px; }
+.welcome-steps li.done strong { color: var(--green); }
+.welcome-steps li.done .btn { display: none; }
+@media (max-width: 900px) { .welcome-steps { grid-template-columns: 1fr; } }

@@ -48,6 +48,7 @@ export const P = {
   inkDeck: (u, d) => `users/${u}/ink/${d}`,
   ink: (u, d, k) => `users/${u}/ink/${d}/${k}`,
   live: (u) => `users/${u}/live`,
+  everPresented: (u) => `users/${u}/prefs/everPresented`,
   projectorOnline: (u) => `users/${u}/presence/projector`,
   phonesOnline: (u) => `users/${u}/presence/phones`,
   phoneOnline: (u, r) => `users/${u}/presence/phones/${r}`,
