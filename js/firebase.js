@@ -9,11 +9,25 @@ import {
   query, orderByKey, limitToLast,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-export const configured = Object.values(firebaseConfig).every((v) => v && v !== 'PASTE_ME');
+const REQUIRED = ['apiKey', 'authDomain', 'databaseURL', 'projectId', 'appId'];
+const cfg = firebaseConfig || {};
+export const missingKeys = REQUIRED.filter((k) => !cfg[k] || cfg[k] === 'PASTE_ME');
+export const configured = missingKeys.length === 0;
 
-export const app = configured ? initializeApp(firebaseConfig) : null;
-export const auth = configured ? getAuth(app) : null;
-export const db = configured ? getDatabase(app) : null;
+let app = null;
+let auth = null;
+let db = null;
+let initError = null;
+if (configured) {
+  try {
+    app = initializeApp(cfg);
+    auth = getAuth(app);
+    db = getDatabase(app);
+  } catch (err) {
+    initError = err && err.message ? err.message : String(err);
+  }
+}
+export { app, auth, db, initError };
 
 export {
   GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signOut,

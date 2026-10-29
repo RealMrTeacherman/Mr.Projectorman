@@ -19,6 +19,8 @@ function send(ops, type = 'ops') { const id = nextId++; return new Promise((res)
 window.__fakeReset = () => send([], 'reset');
 
 export const configured = true;
+export const missingKeys = [];
+export const initError = null;
 export const auth = { listeners: [] };
 export const db = {};
 let current = null;

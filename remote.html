@@ -15,14 +15,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap">
+<script src="js/boot-check.js"></script>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/remote.css">
 </head>
 <body>
+<section id="bootError" class="notice boot-error" hidden>
+  <h1>Slide Remote couldn’t start</h1>
+  <p>Here’s what went wrong. Copy it to Claude if the fix isn’t clear.</p>
+  <pre></pre>
+  <p class="small">Most common fixes: <strong>js/config.js</strong> must start with <code>export const firebaseConfig = {</code> and include a <code>databaseURL</code> line (it appears after you create a Realtime Database).</p>
+</section>
 
 <section id="notConfigured" class="notice" hidden>
   <h1>Almost ready</h1>
   <p>Slide Remote needs your Firebase settings in js/config.js. The README walks through it.</p>
+  <p id="missingKeys" class="small"></p>
 </section>
 
 <section id="starting" class="screen night center">

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.1 (2026-10-29)
+- Startup problems now show on the page instead of a blank screen: a missing `export` in config.js, a missing `databaseURL` (listed by name), Firebase rejecting the settings, or a file that failed to load.
+- New file: js/boot-check.js.
+- README links updated for the Mr.Projectorman repo.
+
 ## v1.0.0 (2026-10-29)
 - Computer page: Google sign-in, deck grid, PDF import (pages rendered with pdf.js and stored in Firebase), full-screen projector view with live ink, keyboard controls (arrows, B, W, F, Esc).
 - Phone remote: one-time 6-digit pairing, then automatic reconnection; upright and sideways layouts; pens (black, blue, red, green), highlighter, whole-line eraser, undo, two-tap clear, whiteboard, hide screen, next-slide preview.

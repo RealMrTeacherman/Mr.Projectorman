@@ -1,7 +1,7 @@
 // computer.js: the classroom computer. Shows decks, presents on the projector,
 // and draws whatever ink the phone sends.
 import {
-  configured, auth, db, P, ref, set, push, remove, get, onValue,
+  configured, missingKeys, initError, auth, db, P, ref, set, push, remove, get, onValue,
   GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, stayPresent, keepAwake,
 } from './firebase.js';
 import { fitBox, renderInk, inkKey, makeCode } from './core.js';
@@ -9,6 +9,8 @@ import { startDeck, endDeck, step, toggleMode } from './live.js';
 
 const $ = (id) => document.getElementById(id);
 const show = (id, on) => { $(id).hidden = !on; };
+
+window.__appStarted = true;
 
 const S = {
   uid: null,
@@ -31,6 +33,9 @@ const S = {
 // ---------- Start up ----------
 if (!configured) {
   show('notConfigured', true);
+  $('missingKeys').textContent = missingKeys.length ? `Missing from config.js: ${missingKeys.join(', ')}` : '';
+} else if (initError) {
+  window.showStartupProblem(`Firebase didn’t accept the settings in js/config.js:\n${initError}`);
 } else {
   onAuthStateChanged(auth, (user) => {
     if (!user || user.isAnonymous) {

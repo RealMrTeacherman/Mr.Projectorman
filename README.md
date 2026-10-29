@@ -2,13 +2,13 @@
 
 Control and draw on your slides from your phone while they show on the projector from your classroom computer. Runs entirely in the browser (nothing to install on the school computer), hosted on GitHub Pages, synced live through Firebase.
 
-- **Computer:** `https://realmrteacherman.github.io/slide-remote/`
-- **Phone:** `https://realmrteacherman.github.io/slide-remote/remote.html` (add to Home Screen)
+- **Computer:** `https://realmrteacherman.github.io/Mr.Projectorman/`
+- **Phone:** `https://realmrteacherman.github.io/Mr.Projectorman/remote.html` (add to Home Screen)
 
 ## One-time setup (about 15 minutes)
 
 ### 1. Put the files on GitHub
-1. Create a new public repo named `slide-remote` under RealMrTeacherman.
+1. Create a new public repo named `Mr.Projectorman` under RealMrTeacherman.
 2. Upload everything in this folder (keep the folder structure).
 3. Settings › Pages › Source: *Deploy from a branch*, branch `main`, folder `/ (root)`. Save.
 

@@ -1,6 +1,6 @@
 // remote.js: the phone. Pairs once, then reconnects on its own every time it opens.
 import {
-  configured, auth, db, P, ref, set, remove, get, onValue, push,
+  configured, missingKeys, initError, auth, db, P, ref, set, remove, get, onValue, push,
   query, orderByKey, limitToLast, signInAnonymously, onAuthStateChanged, stayPresent, keepAwake,
 } from './firebase.js';
 import {
@@ -17,6 +17,8 @@ const SCREENS = ['notConfigured', 'starting', 'setup', 'decks', 'remote'];
 function showScreen(id) {
   for (const s of SCREENS) $(s).hidden = s !== id;
 }
+
+window.__appStarted = true;
 
 const S = {
   uid: null,
@@ -39,6 +41,9 @@ const S = {
 // ---------- Start up ----------
 if (!configured) {
   showScreen('notConfigured');
+  $('missingKeys').textContent = missingKeys.length ? `Missing from config.js: ${missingKeys.join(', ')}` : '';
+} else if (initError) {
+  window.showStartupProblem(`Firebase didn’t accept the settings in js/config.js:\n${initError}`);
 } else {
   onAuthStateChanged(auth, (user) => {
     if (!user) {

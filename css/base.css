@@ -70,3 +70,11 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+.boot-error { position: fixed; inset: 0; z-index: 50; margin: 0; max-width: none; border-radius: 0; overflow: auto; }
+.boot-error pre {
+  white-space: pre-wrap; word-break: break-word; background: #FDECEA; color: #8A1F17;
+  padding: 14px 16px; border-radius: 10px; font-size: 14px; margin: 0 0 16px;
+}
+.boot-error code { background: var(--ground); padding: 1px 6px; border-radius: 6px; }
+.small { font-size: 14px; }
