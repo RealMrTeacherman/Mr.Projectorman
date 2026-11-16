@@ -7,3 +7,7 @@ export const firebaseConfig = {
   messagingSenderId: "871899467234",
   appId: "1:871899467234:web:1284205bcc81fe47e13dbb"
 };
+
+// Google Drive import: the "Web client ID" from Firebase console > Authentication >
+// Sign-in method > Google > Web SDK configuration. It ends in .apps.googleusercontent.com.
+export const googleClientId = '871899467234-25blpe5e3j5ifgmfkhtg7iiva15gn437.apps.googleusercontent.com';
