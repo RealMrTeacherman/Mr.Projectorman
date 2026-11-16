@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.1 (2026-11-16)
+- **Fix: "The Google window closed before finishing"** when adding from Google Drive or uploading a PowerPoint. Drive permission now uses Google's own permission window (Google Identity Services) instead of Firebase's sign-in window, which relied on a hand-off Chrome can block (third-party cookies). Needs the Web client ID in `js/config.js` and the site added to its Authorized JavaScript origins (README, Google Drive import step 4).
+- The window suggests the signed-in school account; if a different account is chosen, its permission is dropped and nothing is imported.
+- Clearer messages when popups are blocked, permission is declined, or the district's Google admin blocks Drive access.
+
 ## v1.2.0 (2026-10-29)
 - **Ready to share:** only verified `@creswell.k12.or.us` Google accounts can sign in on the computer or keep decks, enforced by the database rules (new js/settings.js holds the domain for the page). Other accounts see a clear message with a button to switch accounts. Google's account chooser suggests school accounts.
 - **Getting started guide** for new teachers: three steps (phone, deck, present) that check off as they're done and disappear when finished.

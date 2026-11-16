@@ -35,6 +35,9 @@ In [console.cloud.google.com](https://console.cloud.google.com), with the MrProj
 1. Enable **Google Drive API**, **Google Slides API**, and **Google Picker API** (search each by name).
 2. **Google Auth Platform** (or "OAuth consent screen"): Audience **Internal** if offered; under **Data Access**, add the scope ending in `/auth/drive.file`.
 3. **Credentials › Browser key (auto created by Firebase):** under API restrictions, include **Google Picker API**; under Application restrictions, choose **Websites** and add `https://realmrteacherman.github.io/*`.
+4. **Credentials › OAuth 2.0 Client IDs › Web client (auto created by Google Service):** under **Authorized JavaScript origins**, add `https://realmrteacherman.github.io` (no slash at the end) and save. Copy that client's **Client ID** (ends in `.apps.googleusercontent.com`) into `googleClientId` at the bottom of `js/config.js` and commit. (The same ID is shown in Firebase › Authentication › Sign-in method › Google › Web SDK configuration.)
+
+If clicking **From Google Drive** shows a message that your district's Google admin has blocked Slide Remote, the admin needs to allow the app under Google Admin › Security › API controls. PDF files keep working either way.
 
 ## Everyday use
 1. On the computer, click **From Google Drive** and pick a Google Slides deck or PowerPoint, or drag a PDF or PowerPoint file onto **Add a deck**. Big decks take a few minutes to bring in the first time; the card shows progress, and you can present other decks meanwhile.

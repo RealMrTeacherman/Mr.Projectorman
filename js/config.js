@@ -10,4 +10,4 @@ export const firebaseConfig = {
 
 // Google Drive import: the "Web client ID" from Firebase console > Authentication >
 // Sign-in method > Google > Web SDK configuration. It ends in .apps.googleusercontent.com.
-export const googleClientId = 'PASTE_ME';
+export const googleClientId = '871899467234-25blpe5e3j5ifgmfkhtg7iiva15gn437.apps.googleusercontent.com';
