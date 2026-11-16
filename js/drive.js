@@ -1,35 +1,89 @@
 // drive.js: everything that talks to Google Drive and Google Slides.
 // Used only on the computer. The permission token lives in memory here and is never saved anywhere.
 import { firebaseConfig } from './config.js';
-import { auth, GoogleAuthProvider, reauthenticateWithPopup } from './firebase.js';
+import * as appConfig from './config.js';
+import { auth } from './firebase.js';
+import { ALLOWED_DOMAIN } from './settings.js';
 import { extractNotes } from './core.js';
 
 export const SLIDES_MIME = 'application/vnd.google-apps.presentation';
 export const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const TEMP_PREFIX = '[Slide Remote temporary] ';
+const GSI = 'https://accounts.google.com/gsi/client';
+// Read through the namespace so a config.js without this line still loads (it just can't use Drive).
+const CLIENT_ID = appConfig.googleClientId || '';
 
 let cached = null; // { token, expires }
 
-/** A Drive permission token for the signed-in teacher. Asks Google (popup) only when needed. */
+// Google's own permission window. Loaded ahead of time so it can open straight from the click
+// (browsers block windows that open after a delay).
+let gsiReady = null;
+function loadGsi() {
+  if (!gsiReady) {
+    gsiReady = loadScript(GSI, 'Couldn’t load Google’s permission window. Check the internet connection and try again.')
+      .catch((err) => { gsiReady = null; throw err; });
+  }
+  return gsiReady;
+}
+if (typeof document !== 'undefined') loadGsi().catch(() => {});
+
+function askGoogle(email) {
+  return new Promise((resolve, reject) => {
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPE,
+      login_hint: email || '',
+      hd: ALLOWED_DOMAIN,
+      callback: resolve,
+      error_callback: reject,
+    });
+    client.requestAccessToken({ prompt: '' });
+  });
+}
+
+/**
+ * A Drive permission token for the signed-in teacher. Asks Google only when needed.
+ * Uses Google's own permission window (not Firebase's sign-in window), which hands the
+ * permission straight back to this page and keeps working when Chrome blocks third-party cookies.
+ * It never changes who is signed in to Slide Remote.
+ */
 export async function getDriveToken() {
   if (cached && cached.expires > Date.now() + 60_000) return cached.token;
-  const provider = new GoogleAuthProvider();
-  provider.addScope(SCOPE);
-  let result;
-  try {
-    // Re-confirms the SAME account, so choosing a different one can't switch who's signed in.
-    result = await reauthenticateWithPopup(auth.currentUser, provider);
-  } catch (err) {
-    const code = err.code || '';
-    if (/user-mismatch/.test(code)) throw new Error('Please choose the same Google account you’re signed in to Slide Remote with.');
-    if (/popup-blocked/.test(code)) throw new Error('Chrome blocked the Google window. Allow popups for this site and try again.');
-    if (/popup-closed|cancelled-popup/.test(code)) throw new Error('The Google window closed before finishing.');
-    throw new Error(`Google sign-in didn’t finish (${code || err.message}).`);
+  if (!CLIENT_ID || CLIENT_ID === 'PASTE_ME') {
+    throw new Error('Google Drive isn’t set up yet: the Web client ID is missing from js/config.js (see “Google Drive import” in the README).');
   }
-  const token = GoogleAuthProvider.credentialFromResult(result)?.accessToken;
-  if (!token) throw new Error('Google didn’t give Drive permission. Try again, and leave the Drive box checked.');
-  cached = { token, expires: Date.now() + 50 * 60_000 };
+  const email = (auth.currentUser && auth.currentUser.email) || '';
+  if (!(window.google && window.google.accounts && window.google.accounts.oauth2)) await loadGsi();
+
+  let resp;
+  try {
+    resp = await askGoogle(email);
+  } catch (err) {
+    const type = (err && err.type) || '';
+    if (type === 'popup_failed_to_open') throw new Error('Chrome blocked the Google window. Allow popups for this site and try again.');
+    if (type === 'popup_closed') throw new Error('The Google window closed before finishing. (If Google showed a “blocked” or “access denied” page, your district’s Google admin needs to allow Slide Remote to use Drive.)');
+    throw new Error(`Google permission didn’t finish (${type || (err && err.message) || err}).`);
+  }
+  if (resp.error) {
+    if (resp.error === 'access_denied') throw new Error('Google Drive permission wasn’t given. Try again and choose Allow.');
+    if (resp.error === 'admin_policy_enforced') throw new Error('Your district’s Google admin has blocked Slide Remote from using Drive. Ask them to allow it (PDF files still work).');
+    throw new Error(`Google permission didn’t finish (${resp.error_description || resp.error}).`);
+  }
+  if (!window.google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
+    throw new Error('Google didn’t give Drive permission. Try again, and leave the Drive box checked.');
+  }
+  const token = resp.access_token;
+
+  // Make sure the permission is for the same account that's signed in to Slide Remote.
+  const who = await call(token, 'https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)');
+  const driveEmail = (((await who.json()).user || {}).emailAddress || '').toLowerCase();
+  if (email && driveEmail !== email.toLowerCase()) {
+    try { window.google.accounts.oauth2.revoke(token, () => {}); } catch { /* best effort */ }
+    throw new Error(`Please choose the same Google account you’re signed in to Slide Remote with (${email}).`);
+  }
+
+  cached = { token, expires: Date.now() + Math.min(50 * 60, Number(resp.expires_in) || 3600) * 1000 };
   return token;
 }
 
@@ -60,13 +114,13 @@ async function explain(res, apiName) {
   return `${apiName} said: ${msg}`;
 }
 
-function loadScript(src) {
+function loadScript(src, failMessage = 'Couldn’t load Google’s file picker.') {
   return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    if (document.querySelector(`script[src="${src}"][data-loaded]`)) { resolve(); return; }
     const s = document.createElement('script');
     s.src = src;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Couldn’t load Google’s file picker.'));
+    s.onload = () => { s.dataset.loaded = '1'; resolve(); };
+    s.onerror = () => { s.remove(); reject(new Error(failMessage)); };
     document.head.appendChild(s);
   });
 }
